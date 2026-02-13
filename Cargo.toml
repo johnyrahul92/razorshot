@@ -18,6 +18,7 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 arboard = { version = "3", features = ["wayland-data-control"] }
 ksni = "0.2"
 dirs = "6"

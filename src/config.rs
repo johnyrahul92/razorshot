@@ -6,8 +6,14 @@ use std::path::PathBuf;
 pub struct Config {
     pub save_dir: String,
     pub filename_template: String,
+    #[serde(default = "default_export_format")]
+    pub export_format: String,
     pub annotation: AnnotationConfig,
     pub behavior: BehaviorConfig,
+}
+
+fn default_export_format() -> String {
+    "png".into()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -16,6 +22,12 @@ pub struct AnnotationConfig {
     pub line_width: f64,
     pub font_size: f64,
     pub blur_block_size: u32,
+    #[serde(default = "default_jpeg_quality")]
+    pub jpeg_quality: u8,
+}
+
+fn default_jpeg_quality() -> u8 {
+    90
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -30,12 +42,14 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             save_dir: "~/Pictures/Screenshots".into(),
-            filename_template: "Screenshot_%Y-%m-%d_%H-%M-%S.png".into(),
+            filename_template: "Screenshot_%Y-%m-%d_%H-%M-%S".into(),
+            export_format: "png".into(),
             annotation: AnnotationConfig {
                 default_color: "#ff0000".into(),
                 line_width: 3.0,
                 font_size: 16.0,
                 blur_block_size: 10,
+                jpeg_quality: 90,
             },
             behavior: BehaviorConfig {
                 open_editor: true,

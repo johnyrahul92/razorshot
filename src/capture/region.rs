@@ -19,7 +19,6 @@ pub fn crop_surface(
 }
 
 /// Crop an ImageSurface for a specific monitor region.
-#[allow(dead_code)]
 pub fn crop_for_monitor(
     source: &ImageSurface,
     monitor_x: i32,

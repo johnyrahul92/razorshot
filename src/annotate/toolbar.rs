@@ -22,16 +22,22 @@ pub fn build_toolbar(
 
     // Tool buttons
     let arrow_btn = Button::with_label("Arrow");
+    let line_btn = Button::with_label("Line");
     let rect_btn = Button::with_label("Rect");
+    let ellipse_btn = Button::with_label("Ellipse");
     let text_btn = Button::with_label("Text");
     let draw_btn = Button::with_label("Draw");
+    let highlight_btn = Button::with_label("Highlight");
     let blur_btn = Button::with_label("Blur");
 
     let tool_buttons = vec![
         (arrow_btn.clone(), ToolKind::Arrow),
+        (line_btn.clone(), ToolKind::Line),
         (rect_btn.clone(), ToolKind::Rectangle),
+        (ellipse_btn.clone(), ToolKind::Ellipse),
         (text_btn.clone(), ToolKind::Text),
         (draw_btn.clone(), ToolKind::Freehand),
+        (highlight_btn.clone(), ToolKind::Highlight),
         (blur_btn.clone(), ToolKind::Blur),
     ];
 
@@ -85,6 +91,30 @@ pub fn build_toolbar(
         da_color.queue_draw();
     });
     toolbar.append(&color_btn);
+
+    // Line width SpinButton
+    let lw_adj = gtk4::Adjustment::new(state.borrow().line_width, 1.0, 20.0, 0.5, 1.0, 0.0);
+    let lw_spin = gtk4::SpinButton::new(Some(&lw_adj), 0.5, 1);
+    lw_spin.set_tooltip_text(Some("Line width"));
+    lw_spin.set_width_chars(3);
+    let state_lw = state.clone();
+    lw_spin.connect_value_changed(move |spin| {
+        state_lw.borrow_mut().line_width = spin.value();
+    });
+    toolbar.append(&gtk4::Label::new(Some("W:")));
+    toolbar.append(&lw_spin);
+
+    // Font size SpinButton
+    let fs_adj = gtk4::Adjustment::new(state.borrow().font_size, 8.0, 72.0, 1.0, 4.0, 0.0);
+    let fs_spin = gtk4::SpinButton::new(Some(&fs_adj), 1.0, 0);
+    fs_spin.set_tooltip_text(Some("Font size"));
+    fs_spin.set_width_chars(3);
+    let state_fs = state.clone();
+    fs_spin.connect_value_changed(move |spin| {
+        state_fs.borrow_mut().font_size = spin.value();
+    });
+    toolbar.append(&gtk4::Label::new(Some("F:")));
+    toolbar.append(&fs_spin);
 
     // Separator
     let sep2 = gtk4::Separator::new(Orientation::Vertical);

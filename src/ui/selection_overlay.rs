@@ -43,7 +43,17 @@ pub fn show_selection_overlay(
     let callback = Rc::new(RefCell::new(Some(callback)));
 
     // Clone surface for drawing
-    let surface_for_draw = clone_surface(screenshot);
+    let surface_for_draw = match clone_surface(screenshot) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to clone surface: {e}");
+            if let Some(cb) = callback.borrow_mut().take() {
+                cb(None);
+            }
+            window.close();
+            return;
+        }
+    };
 
     // Draw function: screenshot with dark overlay, clear cutout for selection
     let state_draw = state.clone();
@@ -152,15 +162,15 @@ pub fn show_selection_overlay(
     window.present();
 }
 
-fn clone_surface(src: &ImageSurface) -> ImageSurface {
+fn clone_surface(src: &ImageSurface) -> Result<ImageSurface, String> {
     let w = src.width();
     let h = src.height();
     let dest = ImageSurface::create(cairo::Format::ARgb32, w, h)
-        .expect("Failed to create surface clone");
-    let cr = cairo::Context::new(&dest).expect("Failed to create context");
-    cr.set_source_surface(src, 0.0, 0.0).expect("Failed to set source");
-    cr.paint().expect("Failed to paint");
+        .map_err(|e| format!("Surface create failed: {e}"))?;
+    let cr = cairo::Context::new(&dest).map_err(|e| format!("Context failed: {e}"))?;
+    cr.set_source_surface(src, 0.0, 0.0).map_err(|e| format!("Set source failed: {e}"))?;
+    cr.paint().map_err(|e| format!("Paint failed: {e}"))?;
     drop(cr);
     dest.flush();
-    dest
+    Ok(dest)
 }

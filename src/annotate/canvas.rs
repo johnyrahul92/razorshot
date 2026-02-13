@@ -98,11 +98,31 @@ pub fn render_shape(cr: &cairo::Context, shape: &Shape, pango_layout: &pango::La
             cr.close_path();
             let _ = cr.fill();
         }
+        Shape::Line(line) => {
+            line.color.apply(cr);
+            cr.set_line_width(line.line_width);
+            cr.set_line_cap(cairo::LineCap::Round);
+            cr.move_to(line.start.0, line.start.1);
+            cr.line_to(line.end.0, line.end.1);
+            let _ = cr.stroke();
+        }
         Shape::Rectangle(rect) => {
             rect.color.apply(cr);
             cr.set_line_width(rect.line_width);
             cr.rectangle(rect.x, rect.y, rect.width, rect.height);
             let _ = cr.stroke();
+        }
+        Shape::Ellipse(e) => {
+            e.color.apply(cr);
+            cr.set_line_width(e.line_width);
+            if e.rx > 0.0 && e.ry > 0.0 {
+                let _ = cr.save();
+                cr.translate(e.cx, e.cy);
+                cr.scale(e.rx, e.ry);
+                cr.arc(0.0, 0.0, 1.0, 0.0, 2.0 * PI);
+                let _ = cr.restore();
+                let _ = cr.stroke();
+            }
         }
         Shape::Text(text_shape) => {
             text_shape.color.apply(cr);
@@ -127,6 +147,11 @@ pub fn render_shape(cr: &cairo::Context, shape: &Shape, pango_layout: &pango::La
                 cr.line_to(x, y);
             }
             let _ = cr.stroke();
+        }
+        Shape::Highlight(hl) => {
+            cr.set_source_rgba(hl.color.r, hl.color.g, hl.color.b, hl.color.a.min(0.4));
+            cr.rectangle(hl.x, hl.y, hl.width, hl.height);
+            let _ = cr.fill();
         }
         Shape::Blur(_) => {
             // Blur is rendered separately via render_blur_shape
