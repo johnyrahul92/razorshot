@@ -48,14 +48,29 @@ sudo cp target/release/razorshot /usr/local/bin/
 
 ### Install via .deb package
 
+A build script is included that handles everything:
+
 ```bash
-cargo install cargo-deb
 git clone https://github.com/johnyrahul92/razorshot.git
 cd razorshot
+./build-deb.sh
+sudo dpkg -i target/debian/razorshot_*.deb
+sudo apt-get install -f  # install any missing runtime deps
+```
+
+The script will:
+- Check for required system dependencies
+- Install `cargo-deb` if needed
+- Build the release binary
+- Package the `.deb`
+
+Or do it manually:
+
+```bash
+cargo install cargo-deb
 cargo build --release
 cargo deb --no-build
 sudo dpkg -i target/debian/razorshot_0.1.0-1_amd64.deb
-sudo apt-get install -f  # install any missing dependencies
 ```
 
 ## Usage
