@@ -20,7 +20,7 @@ serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 arboard = { version = "3", features = ["wayland-data-control"] }
-ksni = "0.2"
+ksni = "0.3"
 dirs = "6"
 chrono = "0.4"
 log = "0.4"

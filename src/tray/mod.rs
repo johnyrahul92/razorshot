@@ -1,4 +1,4 @@
-use ksni::{self, menu::StandardItem, Icon, Tray};
+use ksni::{self, menu::StandardItem, Icon, Tray, TrayMethods};
 use std::sync::mpsc;
 
 /// Messages from the tray to the GTK main thread
@@ -67,6 +67,8 @@ fn generate_icon() -> Icon {
 }
 
 impl Tray for RazorshotTray {
+    const MENU_ON_ACTIVATE: bool = true;
+
     fn id(&self) -> String {
         "razorshot".into()
     }
@@ -125,9 +127,20 @@ pub fn start_tray() -> mpsc::Receiver<TrayAction> {
 
     std::thread::spawn(move || {
         log::info!("Starting system tray service...");
-        let service = ksni::TrayService::new(RazorshotTray { tx });
-        match service.run() {
-            Ok(()) => log::info!("Tray service exited normally"),
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime for tray");
+        match rt.block_on(RazorshotTray { tx }.spawn()) {
+            Ok(handle) => {
+                log::info!("Tray service started");
+                // Keep the thread alive until the handle is closed
+                rt.block_on(async {
+                    loop {
+                        if handle.is_closed() {
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    }
+                });
+            }
             Err(e) => log::error!("Tray service failed: {} — COSMIC may not support StatusNotifierItem", e),
         }
     });
