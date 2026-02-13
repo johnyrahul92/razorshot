@@ -68,7 +68,7 @@ impl CanvasState {
     }
 }
 
-/// Render a shape onto a Cairo context
+/// Render a non-blur shape onto a Cairo context
 pub fn render_shape(cr: &cairo::Context, shape: &Shape, pango_layout: &pango::Layout) {
     match shape {
         Shape::Arrow(arrow) => {
@@ -81,8 +81,8 @@ pub fn render_shape(cr: &cairo::Context, shape: &Shape, pango_layout: &pango::La
             let _ = cr.stroke();
 
             // Draw arrowhead
-            let dx = arrow.end.0 - arrow.start.0;
             let dy = arrow.end.1 - arrow.start.1;
+            let dx = arrow.end.0 - arrow.start.0;
             let angle = dy.atan2(dx);
             let head_len = 15.0;
             let head_angle = PI / 6.0;
@@ -128,16 +128,35 @@ pub fn render_shape(cr: &cairo::Context, shape: &Shape, pango_layout: &pango::La
             }
             let _ = cr.stroke();
         }
-        Shape::Blur(blur) => {
-            // Blur is applied as a pixelation effect; during preview we show a dashed outline
-            cr.set_source_rgba(0.5, 0.5, 0.5, 0.5);
-            cr.set_line_width(1.0);
-            cr.set_dash(&[4.0, 4.0], 0.0);
-            cr.rectangle(blur.x, blur.y, blur.width, blur.height);
-            let _ = cr.stroke();
-            cr.set_dash(&[], 0.0);
+        Shape::Blur(_) => {
+            // Blur is rendered separately via render_blur_shape
         }
     }
+}
+
+/// Render a blur shape as actual pixelation on the canvas
+fn render_blur_shape(cr: &cairo::Context, blur: &BlurShape, base_surface: &ImageSurface) {
+    if let Some(pixelated) = crate::annotate::blur::pixelate_region_copy(
+        base_surface,
+        blur.x as i32,
+        blur.y as i32,
+        blur.width as i32,
+        blur.height as i32,
+        blur.block_size,
+    ) {
+        let _ = cr.set_source_surface(&pixelated, blur.x, blur.y);
+        let _ = cr.paint();
+    }
+}
+
+/// Render a blur preview as a dashed outline (used while actively dragging)
+fn render_blur_preview(cr: &cairo::Context, blur: &BlurShape) {
+    cr.set_source_rgba(0.5, 0.5, 1.0, 0.6);
+    cr.set_line_width(2.0);
+    cr.set_dash(&[6.0, 4.0], 0.0);
+    cr.rectangle(blur.x, blur.y, blur.width, blur.height);
+    let _ = cr.stroke();
+    cr.set_dash(&[], 0.0);
 }
 
 /// Build the annotation DrawingArea with event handlers.
@@ -168,7 +187,10 @@ pub fn build_canvas(
 
         // Render completed shapes
         for shape in &st.shapes {
-            render_shape(cr, shape, &layout);
+            match shape {
+                Shape::Blur(blur) => render_blur_shape(cr, blur, &st.surface),
+                _ => render_shape(cr, shape, &layout),
+            }
         }
 
         // Render active (in-progress) shape preview
@@ -177,7 +199,10 @@ pub fn build_canvas(
             st.line_width,
             st.blur_block_size,
         ) {
-            render_shape(cr, &preview, &layout);
+            match &preview {
+                Shape::Blur(blur) => render_blur_preview(cr, blur),
+                _ => render_shape(cr, &preview, &layout),
+            }
         }
     });
 
@@ -188,7 +213,6 @@ pub fn build_canvas(
     drag.connect_drag_begin(move |_gesture, x, y| {
         let mut st = state_press.borrow_mut();
         if st.current_tool == ToolKind::Text {
-            // Text tool uses click, not drag
             return;
         }
         st.active_draw = ActiveDraw::begin(st.current_tool, x, y);
@@ -230,7 +254,6 @@ pub fn build_canvas(
         let mut st = state_click.borrow_mut();
         if st.current_tool == ToolKind::Text {
             st.pending_text_position = Some((x, y));
-            // The window will check for pending_text_position and show a popover
             da_click.queue_draw();
         }
     });
@@ -244,7 +267,6 @@ pub fn render_final_image(state: &CanvasState) -> Result<ImageSurface, Box<dyn s
     let width = state.surface.width();
     let height = state.surface.height();
 
-    // For blur shapes, we need to work on a copy of the original surface
     let result = ImageSurface::create(cairo::Format::ARgb32, width, height)?;
     let cr = cairo::Context::new(&result)?;
 
@@ -252,35 +274,33 @@ pub fn render_final_image(state: &CanvasState) -> Result<ImageSurface, Box<dyn s
     cr.set_source_surface(&state.surface, 0.0, 0.0)?;
     cr.paint()?;
 
-    // Apply blur regions first (directly on pixel data)
+    // Must drop context and flush before accessing pixel data
     drop(cr);
-    let mut blurs: Vec<&BlurShape> = Vec::new();
+    result.flush();
+
+    // Apply blur regions directly on pixel data
+    let mut result = result;
     for shape in &state.shapes {
         if let Shape::Blur(blur) = shape {
-            blurs.push(blur);
+            crate::annotate::blur::pixelate_region(
+                &mut result,
+                blur.x as i32,
+                blur.y as i32,
+                blur.width as i32,
+                blur.height as i32,
+                blur.block_size,
+            );
         }
     }
 
-    let mut result = result;
-    for blur in &blurs {
-        crate::annotate::blur::pixelate_region(
-            &mut result,
-            blur.x as i32,
-            blur.y as i32,
-            blur.width as i32,
-            blur.height as i32,
-            blur.block_size,
-        );
-    }
-
-    // Now render vector shapes on top
+    // Render vector shapes on top
     let cr = cairo::Context::new(&result)?;
     let pango_ctx = pangocairo::functions::create_context(&cr);
     let layout = pango::Layout::new(&pango_ctx);
 
     for shape in &state.shapes {
         if matches!(shape, Shape::Blur(_)) {
-            continue; // Already applied
+            continue;
         }
         render_shape(&cr, shape, &layout);
     }

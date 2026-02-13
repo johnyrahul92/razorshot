@@ -29,7 +29,8 @@ env_logger = "0.11"
 maintainer = "Razorshot Team <razorshot@example.com>"
 section = "graphics"
 priority = "optional"
-depends = "$auto, xdg-desktop-portal, xdg-desktop-portal-cosmic"
+depends = "$auto, xdg-desktop-portal"
+recommends = "xdg-desktop-portal-cosmic | xdg-desktop-portal-gnome | xdg-desktop-portal-kde | xdg-desktop-portal-wlr"
 assets = [
     ["target/release/razorshot", "usr/bin/", "755"],
     ["resources/com.razorshot.Razorshot.desktop", "usr/share/applications/", "644"],
