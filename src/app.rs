@@ -32,7 +32,6 @@ where
     let (tx, rx) = mpsc::channel::<Result<String, String>>();
 
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(200));
         let result = capture::portal::capture_screenshot_path(interactive);
         let _ = tx.send(result);
     });
