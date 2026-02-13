@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Razorshot
+Comment=Wayland screenshot and annotation tool
+Exec=razorshot
+Icon=razorshot
+Terminal=false
+Type=Application
+Categories=Graphics;Utility;
+Keywords=screenshot;capture;annotate;wayland;
+StartupNotify=false

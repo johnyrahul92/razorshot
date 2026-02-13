@@ -1,0 +1,37 @@
+[package]
+name = "razorshot"
+version = "0.1.0"
+edition = "2021"
+description = "A native Wayland screenshot and annotation tool"
+license = "MIT"
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_12"] }
+gdk4 = "0.9"
+cairo-rs = { version = "0.20", features = ["png"] }
+pango = "0.20"
+pangocairo = "0.20"
+glib = "0.20"
+gio = "0.20"
+ashpd = { version = "0.10", features = ["gtk4"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+arboard = { version = "3", features = ["wayland-data-control"] }
+ksni = "0.2"
+dirs = "6"
+chrono = "0.4"
+log = "0.4"
+env_logger = "0.11"
+
+[package.metadata.deb]
+maintainer = "Razorshot Team <razorshot@example.com>"
+section = "graphics"
+priority = "optional"
+depends = "$auto, xdg-desktop-portal, xdg-desktop-portal-cosmic"
+assets = [
+    ["target/release/razorshot", "usr/bin/", "755"],
+    ["resources/com.razorshot.Razorshot.desktop", "usr/share/applications/", "644"],
+    ["resources/icons/razorshot.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+]

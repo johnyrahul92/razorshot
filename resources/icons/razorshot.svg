@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Camera body -->
+  <rect x="8" y="18" width="48" height="36" rx="4" ry="4" fill="#4a90d9" stroke="#2c5aa0" stroke-width="2"/>
+  <!-- Lens -->
+  <circle cx="32" cy="36" r="12" fill="#2c5aa0" stroke="#1a3d6e" stroke-width="2"/>
+  <circle cx="32" cy="36" r="8" fill="#6bb5ff"/>
+  <circle cx="32" cy="36" r="4" fill="#ffffff" opacity="0.6"/>
+  <!-- Flash -->
+  <rect x="22" y="14" width="20" height="8" rx="2" ry="2" fill="#5ba0e0" stroke="#2c5aa0" stroke-width="1"/>
+  <!-- Razor accent (diagonal line) -->
+  <line x1="48" y1="12" x2="56" y2="4" stroke="#ff6b6b" stroke-width="3" stroke-linecap="round"/>
+  <line x1="52" y1="16" x2="60" y2="8" stroke="#ff6b6b" stroke-width="3" stroke-linecap="round"/>
+</svg>
