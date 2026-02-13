@@ -25,9 +25,12 @@ impl Color {
 #[derive(Debug, Clone)]
 pub enum Shape {
     Arrow(ArrowShape),
+    Line(LineShape),
     Rectangle(RectShape),
+    Ellipse(EllipseShape),
     Text(TextShape),
     Freehand(FreehandShape),
+    Highlight(HighlightShape),
     Blur(BlurShape),
 }
 
@@ -40,11 +43,29 @@ pub struct ArrowShape {
 }
 
 #[derive(Debug, Clone)]
+pub struct LineShape {
+    pub start: (f64, f64),
+    pub end: (f64, f64),
+    pub color: Color,
+    pub line_width: f64,
+}
+
+#[derive(Debug, Clone)]
 pub struct RectShape {
     pub x: f64,
     pub y: f64,
     pub width: f64,
     pub height: f64,
+    pub color: Color,
+    pub line_width: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct EllipseShape {
+    pub cx: f64,
+    pub cy: f64,
+    pub rx: f64,
+    pub ry: f64,
     pub color: Color,
     pub line_width: f64,
 }
@@ -63,6 +84,15 @@ pub struct FreehandShape {
     pub points: Vec<(f64, f64)>,
     pub color: Color,
     pub line_width: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct HighlightShape {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+    pub color: Color,
 }
 
 #[derive(Debug, Clone)]

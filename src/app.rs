@@ -10,17 +10,17 @@ use crate::ui;
 const APP_ID: &str = "com.razorshot.Razorshot";
 
 /// Clone a cairo ImageSurface
-fn clone_surface(src: &cairo::ImageSurface) -> cairo::ImageSurface {
+fn clone_surface(src: &cairo::ImageSurface) -> Result<cairo::ImageSurface, String> {
     let w = src.width();
     let h = src.height();
     let dest = cairo::ImageSurface::create(cairo::Format::ARgb32, w, h)
-        .expect("Failed to create surface");
-    let cr = cairo::Context::new(&dest).expect("Failed to create context");
-    cr.set_source_surface(src, 0.0, 0.0).expect("Failed to set source");
-    cr.paint().expect("Failed to paint");
+        .map_err(|e| format!("Surface create failed: {e}"))?;
+    let cr = cairo::Context::new(&dest).map_err(|e| format!("Context failed: {e}"))?;
+    cr.set_source_surface(src, 0.0, 0.0).map_err(|e| format!("Set source failed: {e}"))?;
+    cr.paint().map_err(|e| format!("Paint failed: {e}"))?;
     drop(cr);
     dest.flush();
-    dest
+    Ok(dest)
 }
 
 /// Capture screenshot in background thread, deliver path to GTK main thread,
@@ -67,12 +67,41 @@ where
     });
 }
 
+/// Optionally crop a surface to a specific monitor's region.
+fn apply_monitor_crop(surface: cairo::ImageSurface, monitor: Option<u32>) -> cairo::ImageSurface {
+    let Some(idx) = monitor else { return surface };
+    let display = match gdk4::Display::default() {
+        Some(d) => d,
+        None => {
+            log::warn!("No display available for monitor crop");
+            return surface;
+        }
+    };
+    let monitors = display.monitors();
+    let mon = match monitors.item(idx).and_then(|o| o.downcast::<gdk4::Monitor>().ok()) {
+        Some(m) => m,
+        None => {
+            log::warn!("Monitor {idx} not found");
+            return surface;
+        }
+    };
+    let geom = mon.geometry();
+    match capture::region::crop_for_monitor(&surface, geom.x(), geom.y(), geom.width(), geom.height()) {
+        Ok(cropped) => cropped,
+        Err(e) => {
+            log::error!("Monitor crop failed: {e}");
+            surface
+        }
+    }
+}
+
 /// Run a full screen capture (no editor)
-fn do_full_no_edit(app: &gtk4::Application, config: Config, _monitor: Option<u32>) {
+fn do_full_no_edit(app: &gtk4::Application, config: Config, monitor: Option<u32>) {
     let app = app.clone();
     capture_then(false, move |result| {
         match result {
             Ok(surface) => {
+                let surface = apply_monitor_crop(surface, monitor);
                 match output::file::save_screenshot(&surface, &config) {
                     Ok(path) => log::info!("Screenshot saved to {}", path.display()),
                     Err(e) => log::error!("Failed to save screenshot: {}", e),
@@ -90,11 +119,12 @@ fn do_full_no_edit(app: &gtk4::Application, config: Config, _monitor: Option<u32
 }
 
 /// Run a full screen capture with editor
-fn do_full_edit(app: &gtk4::Application, config: Config, _monitor: Option<u32>) {
+fn do_full_edit(app: &gtk4::Application, config: Config, monitor: Option<u32>) {
     let app = app.clone();
     capture_then(false, move |result| {
         match result {
             Ok(surface) => {
+                let surface = apply_monitor_crop(surface, monitor);
                 ui::window::show_editor(&app, surface, config);
             }
             Err(e) => {
@@ -111,7 +141,14 @@ fn do_region_no_edit(app: &gtk4::Application, config: Config) {
     capture_then(false, move |result| {
         match result {
             Ok(surface) => {
-                let surface_for_closure = clone_surface(&surface);
+                let surface_for_closure = match clone_surface(&surface) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("Failed to clone surface: {}", e);
+                        app.quit();
+                        return;
+                    }
+                };
                 let app_clone = app.clone();
                 let config_clone = config.clone();
                 ui::selection_overlay::show_selection_overlay(
@@ -156,7 +193,14 @@ fn do_region_edit(app: &gtk4::Application, config: Config) {
     capture_then(false, move |result| {
         match result {
             Ok(surface) => {
-                let surface_for_closure = clone_surface(&surface);
+                let surface_for_closure = match clone_surface(&surface) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("Failed to clone surface: {}", e);
+                        app.quit();
+                        return;
+                    }
+                };
                 let app_clone = app.clone();
                 let config_clone = config.clone();
                 ui::selection_overlay::show_selection_overlay(

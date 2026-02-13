@@ -131,17 +131,31 @@ pub fn show_editor(
                 // Save to file
                 match output::file::save_screenshot(&final_surface, &config_done) {
                     Ok(path) => log::info!("Saved to {}", path.display()),
-                    Err(e) => log::error!("Failed to save: {}", e),
+                    Err(e) => {
+                        crate::ui::feedback::show_error(
+                            Some(&window_done.clone().upcast()),
+                            "Save Failed",
+                            &e.to_string(),
+                        );
+                    }
                 }
                 // Copy to clipboard
                 if config_done.behavior.copy_to_clipboard {
                     if let Err(e) = output::clipboard::copy_to_clipboard(&final_surface) {
-                        log::error!("Failed to copy to clipboard: {}", e);
+                        crate::ui::feedback::show_error(
+                            Some(&window_done.clone().upcast()),
+                            "Clipboard Failed",
+                            &e.to_string(),
+                        );
                     }
                 }
             }
             Err(e) => {
-                log::error!("Failed to render final image: {}", e);
+                crate::ui::feedback::show_error(
+                    Some(&window_done.clone().upcast()),
+                    "Render Failed",
+                    &e.to_string(),
+                );
             }
         }
         window_done.close();
